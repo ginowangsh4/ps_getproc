@@ -89,5 +89,14 @@ sys_uptime(void)
   return xticks;
 }
 
+// return the number of current processes in the kernel which is
+// the number of entries in the kernel's process table that are
+// in any state other than UNUSED
 int
-sys_getprocs(void);
+sys_getprocs(void)
+{
+  // construct the proc info table
+  struct ProcessInfo processInfoTable[];
+  
+  return getprocs();
+}
