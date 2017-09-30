@@ -96,7 +96,9 @@ int
 sys_getprocs(void)
 {
   // construct the proc info table
-  struct ProcessInfo processInfoTable[];
-  
-  return getprocs();
+  struct ProcessInfo *proc;
+  int size = sizeof(struct ProcessIndo) * NPROC;
+  if (argptr(0, (char**) proc, size) < 0)
+    return -1;
+  return getprocs(proc);
 }

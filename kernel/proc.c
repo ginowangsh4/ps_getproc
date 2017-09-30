@@ -447,6 +447,22 @@ procdump(void)
 // Return the number of processes in the process table
 // Return -1 if none
 int
-getprocs(struct ProcessInfo processInfoTable[]) {
-
+getprocs(struct ProcessInfo *processInfoTable) {
+  int count = 0;
+  int i;
+  struct proc *currentproc;
+  for (currentproc = ptable.proc, i = 0; currentproc < &ptable.proc[NPROC] && i < NPROC; currentproc++, i++) {
+    if (currentproc->state == UNUSED)
+      continue;
+    processInfoTable[i].pid = currentproc->pid;
+    processInfoTable[i].ppid = currentproc->parent->pid;
+    processInfoTable[i].state = currentproc->state;
+    processInfoTable[i].sz = currentproc->sz;
+    int j;
+    for (j = 0; j < 16; j++)
+      processInfoTable[i].name[j] = currentproc->name[j];
+    // increment number of running processes found
+    count++;
+  }
+  return count;
 }
