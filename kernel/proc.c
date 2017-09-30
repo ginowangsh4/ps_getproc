@@ -455,13 +455,14 @@ getprocs(struct ProcessInfo* processInfoTable) {
     if (currentproc->state == UNUSED)
       continue;
     processInfoTable[i].pid = currentproc->pid;
-    processInfoTable[i].ppid = currentproc->parent->pid;
+    // The parent process id of the first process is meaningless. For this value, print -1.
+    processInfoTable[i].ppid = currentproc->pid == 0 ? -1 : currentproc->parent->pid;
     processInfoTable[i].state = currentproc->state;
     processInfoTable[i].sz = currentproc->sz;
     int j;
     for (j = 0; j < 16; j++)
       processInfoTable[i].name[j] = currentproc->name[j];
-    // increment number of running processes found
+    // Increment number of running processes found
     count++;
   }
   return count;
