@@ -5,6 +5,8 @@
 #include "mmu.h"
 #include "proc.h"
 #include "sysfunc.h"
+#include "ProcessInfo.h"
+
 
 int
 sys_fork(void)
@@ -60,7 +62,7 @@ sys_sleep(void)
 {
   int n;
   uint ticks0;
-  
+
   if(argint(0, &n) < 0)
     return -1;
   acquire(&tickslock);
@@ -82,9 +84,22 @@ int
 sys_uptime(void)
 {
   uint xticks;
-  
+
   acquire(&tickslock);
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+// return the number of current processes in the kernel which is
+// the number of entries in the kernel's process table that are
+// in any state other than UNUSED
+int
+sys_getprocs(void)
+{
+  // construct the proc info table
+  struct ProcessInfo *p;
+  if (argptr(0, (char**) &p, sizeof(struct ProcessInfo) * NPROC) < 0)
+    return -1;
+  return getprocs(p);
 }
