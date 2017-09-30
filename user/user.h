@@ -1,5 +1,6 @@
 #ifndef _USER_H_
 #define _USER_H_
+#include "ProcessInfo.h"
 
 struct stat;
 
@@ -39,6 +40,6 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+int getprocs(struct ProcessInfo*);
 
 #endif // _USER_H_
-

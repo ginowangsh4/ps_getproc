@@ -456,7 +456,7 @@ getprocs(struct ProcessInfo* processInfoTable) {
       continue;
     processInfoTable[i].pid = currentproc->pid;
     // The parent process id of the first process is meaningless. For this value, print -1.
-    processInfoTable[i].ppid = currentproc->pid == 0 ? -1 : currentproc->parent->pid;
+    processInfoTable[i].ppid = i == 0 ? -1 : currentproc->parent->pid;
     processInfoTable[i].state = currentproc->state;
     processInfoTable[i].sz = currentproc->sz;
     int j;
