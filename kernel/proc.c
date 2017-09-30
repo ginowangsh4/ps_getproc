@@ -447,7 +447,7 @@ procdump(void)
 // Return the number of processes in the process table
 // Return -1 if none
 int
-getprocs(struct ProcessInfo *processInfoTable) {
+getprocs(struct ProcessInfo* processInfoTable) {
   int count = 0;
   int i;
   struct proc *currentproc;

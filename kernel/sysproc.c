@@ -5,6 +5,8 @@
 #include "mmu.h"
 #include "proc.h"
 #include "sysfunc.h"
+#include "ProcessInfo.h"
+
 
 int
 sys_fork(void)
@@ -96,9 +98,8 @@ int
 sys_getprocs(void)
 {
   // construct the proc info table
-  struct ProcessInfo *proc;
-  int size = sizeof(struct ProcessIndo) * NPROC;
-  if (argptr(0, (char**) proc, size) < 0)
+  struct ProcessInfo *p;
+  if (argptr(0, (char**) &p, sizeof(struct ProcessInfo) * NPROC) < 0)
     return -1;
-  return getprocs(proc);
+  return getprocs(p);
 }
