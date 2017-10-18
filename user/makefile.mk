@@ -14,12 +14,15 @@ USER_PROGS := \
 	sh\
 	stressfs\
 	tester\
-	usertests\
-	usertests_2_1\
 	wc\
 	zombie\
 	ps\
-	derefnull
+	derefnull\
+	sharedmem_simpletests\
+	usertests\
+	usertests_2_1\
+	usertests_2_1
+
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 
