@@ -366,3 +366,15 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   }
   return 0;
 }
+
+// Request shared memory access by a process
+void* shmem_access(int page_number)
+{
+  
+}
+
+// Count number of process using the shared page
+int shmem_count(int page_number)
+{
+
+}
