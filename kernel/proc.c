@@ -70,8 +70,8 @@ found:
   p->context->eip = (uint)forkret;
 
   p->shmem_count = 0;
-  int i = 0;
-  for (; i < 4; i ++){
+  int i;
+  for (i = 0; i < 4; i ++){
     p->shmem_address[i] = NULL;
   }
 
@@ -164,9 +164,11 @@ fork(void)
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
 
-  if (copy_shmem(np, proc) == -1){
-    return -1;
+  np->shmem_count = proc->shmem_count;
+  for (i = 0; i < 4; i++) {
+    np->shmem_address[i] = proc->shmem_address[i];
   }
+  copy_shmem(np);
 
   return pid;
 }
@@ -208,7 +210,8 @@ exit(void)
     }
   }
 
-  freeshmem(p);
+  // free any shared memory for current proc
+  free_shmem(proc);
 
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;

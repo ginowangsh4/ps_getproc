@@ -66,16 +66,23 @@ whenSharingAPage_ParentSeesChangesMadeByChild()
   printf(1, "Test: whenSharingAPage_ParentSeesChangesMadeByChild...");
   char* sharedPage = shmem_access(0);
   sharedPage[0] = 42;
-
+  // printf(1, "NOW PARENT PROCESS HAS SHARED PAGE COUNT = %d\n", sharedPage[0]);
   int pid = fork();
+
   if(pid == 0){
     // in child
+    // printf(1,"In child!!!!!\n");
     char* childsSharedPage = shmem_access(0);
+    // printf(1, "aaaaaa%d\n", sharedPage[0]);
     childsSharedPage[0] = childsSharedPage[0] + 1;
+    // printf(1, "bbbbbb%d\n", sharedPage[0]);
+
     exit();
   } else {
     // in parent
     wait(); // wait for child to terminate
+    // printf(1, "%d\n", sharedPage[0]);
+
     if(sharedPage[0] == 43){
       testPassed();
     } else {

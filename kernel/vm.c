@@ -231,7 +231,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
   char *mem;
   uint a;
 
-  if(newsz + PGSIZE > USERTOP)
+  if(newsz + PGSIZE + PGSIZE * proc->shmem_count > USERTOP)
     return 0;
   if(newsz < oldsz)
     return oldsz;
@@ -286,7 +286,7 @@ freevm(pde_t *pgdir)
 
   if(pgdir == 0)
     panic("freevm: no pgdir");
-  deallocuvm(pgdir, USERTOP - PGSIZE, 0);
+  deallocuvm(pgdir, USERTOP - PGSIZE - PGSIZE * 4, 0);
   for(i = 0; i < NPDENTRIES; i++){
     if(pgdir[i] & PTE_P)
       kfree((char*)PTE_ADDR(pgdir[i]));
@@ -367,47 +367,51 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+// shared page
 int all_shmem_count[4];
 void* all_shmem_address[4];
 
 // initialize shared memory
-void shmeminit(void){
-  int i = 0;
-  for(; i < 4; i ++){
+void shmem_init(void){
+  int i;
+  for(i = 0; i < 4; i ++){
     all_shmem_address[i] = NULL;
     all_shmem_count[i] = 0;
   }
 }
 
 // free shared memory if no process is using it
-void freeshmem(struct proc* proc){
-  int i = 0;
-  for (; i < 4; i ++){
-    if (proc->shmem_address[i] != NULL){
-      if (all_shmem_address[i] != NULL){
-        all_shmem_count[i] --;
-        if (all_shmem_count[i] == 0){
-          kfree((char*) all_shmem_address[i]);
-        }
+void free_shmem(struct proc* p){
+  int i;
+  for (i = 0; i < 4; i ++){
+    if (p->shmem_address[i] != NULL){
+      // extra credit: free this shared page if this is the only process using it
+      // so that it can be treated as a normal page
+      if (all_shmem_count[i] == 1 && all_shmem_address[i] != NULL){
+        kfree((char*) all_shmem_address[i]);
       }
+      all_shmem_count[i]--;
     }
   }
 }
 
 
 // let the child inheret its parent's shared memory
-int copy_shmem(struct proc* np, struct proc* proc){
-  np->shmem_count = proc->shmem_count;
-  int j = 0;
-  for (; j < 4; j ++){
-    if (proc->shmem_address[j] != NULL){
-      if(mappages(np->pgdir, np->shmem_address[j], PGSIZE, PADDR(all_shmem_address[j]), PTE_W|PTE_U) < 0){
-        panic("copy_shmem cannot map.");
-        return -1;
-      }
+void copy_shmem(struct proc* np){
+  // cprintf("Copying shared memory in fork...\n");
+  int i;
+  for (i = 0; i < 4; i++){
+    // if (proc->shmem_address[j] != NULL){
+    //   if(mappages(np->pgdir, np->shmem_address[j], PGSIZE, PADDR(all_shmem_address[j]), PTE_W|PTE_U) < 0){
+    //     panic("copy_shmem cannot map.");
+    //     return -1;
+    //   }
+    // }
+    if (np->shmem_address[i] != NULL) {
+      all_shmem_count[i]++;
     }
+    //cprintf("%d has %d\n",i, all_shmem_count[i]);
   }
-  return 0;
 }
 
 
@@ -418,7 +422,6 @@ void* shmem_access(int page_number)
     panic("Already requested 4 shared pages.");
     return NULL;
   }
-
   if (page_number < 0 || page_number > 3){
     panic("Invalid page number. Valid page numbers: 0,1,2,3.");
     return NULL;
@@ -426,7 +429,11 @@ void* shmem_access(int page_number)
 
   // if the process has requested that shared page before
   if (proc->shmem_address[page_number] != NULL){
-    //TODO mappage again?
+    // cprintf("Process has this page number? count is %d", proc->shmem_count);
+    // va and pa mapping has not been performed for new process with shared address
+    if (mappages(proc->pgdir, proc->shmem_address[page_number], PGSIZE, PADDR(all_shmem_address[page_number]), PTE_W|PTE_U) < 0) {
+      return NULL;
+    }
     return proc->shmem_address[page_number];
   }
 
@@ -436,13 +443,9 @@ void* shmem_access(int page_number)
     return NULL;
   }
 
-  //TODO: kalloc regardless whether all_shmem_count[page_number] == 0 or not?
-
-  if (all_shmem_count[page_number] == 0){
-    if ((all_shmem_address[page_number] = kalloc()) == 0){
+  // todo: kalloc regardless whether all_shmem_count[page_number] == 0 or not?
+  if ((all_shmem_address[page_number] = kalloc()) == 0){
       panic("Cannot allocate physical memory.");
-      return NULL;
-    }
   }
 
   if (mappages(proc->pgdir, new_address, PGSIZE, PADDR(all_shmem_address[page_number]), PTE_W|PTE_U) < 0){
@@ -464,6 +467,9 @@ int shmem_count(int page_number)
     panic("Invalid page number. Valid page numbers: 0,1,2,3.");
     return -1;
   }
-
+  if (proc->shmem_count < 0 || proc->shmem_count > 3){
+    panic("Process has invalid page number. Valid page numbers: 0,1,2,3.");
+    return -1;
+  }
   return all_shmem_count[page_number];
 }
