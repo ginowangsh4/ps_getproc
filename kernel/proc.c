@@ -164,7 +164,9 @@ fork(void)
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
 
-  copy_shmem(np, proc);
+  if (copy_shmem(np, proc) == -1){
+    return -1;
+  }
 
   return pid;
 }

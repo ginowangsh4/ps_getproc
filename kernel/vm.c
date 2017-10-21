@@ -396,15 +396,18 @@ void freeshmem(struct proc* proc){
 
 
 // let the child inheret its parent's shared memory
-void copy_shmem(struct proc* np, struct proc* proc){
+int copy_shmem(struct proc* np, struct proc* proc){
   np->shmem_count = proc->shmem_count;
   int j = 0;
   for (; j < 4; j ++){
-    np->shmem_address[j] = proc->shmem_address[j];
-    if (np->shmem_address[j] != NULL){
-      all_shmem_count[j] ++;
+    if (proc->shmem_address[j] != NULL){
+      if(mappages(np->pgdir, np->shmem_address[j], PGSIZE, PADDR(all_shmem_address[j]), PTE_W|PTE_U) < 0){
+        panic("copy_shmem cannot map.");
+        return -1;
+      }
     }
   }
+  return 0;
 }
 
 
@@ -428,7 +431,7 @@ void* shmem_access(int page_number)
   }
 
   void* new_address = (void*)(USERTOP - proc->shmem_count * PGSIZE - PGSIZE);
-  if (proc->sz >= (int) new_address){
+  if (proc->sz >= (uint) new_address){
     panic("Not enough space.");
     return NULL;
   }
