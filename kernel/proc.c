@@ -69,6 +69,12 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
+  p->shmem_count = 0;
+  int i = 0;
+  for (; i < 4; i ++){
+    p->shmem_address[i] = NULL;
+  }
+
   return p;
 }
 
@@ -157,6 +163,15 @@ fork(void)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
+
+  np->shmem_count = proc->shmem_count;
+  int i = 0;
+  for (; i < 4; i ++){
+    np->shmem_address[i] = proc->shmem_address[i];
+    if (np->shmem_address[i] != NULL){
+      all_shmem_count[i] ++;
+    }
+  }
   return pid;
 }
 
@@ -196,6 +211,8 @@ exit(void)
         wakeup1(initproc);
     }
   }
+
+  freeshmem(p);
 
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;

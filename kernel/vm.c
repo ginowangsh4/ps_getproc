@@ -367,14 +367,87 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+int all_shmem_count[4];
+void* all_shmem_address[4];
+
+// initialize shared memory
+void shmeminit(void){
+  int i = 0;
+  for(; i < 4; i ++){
+    all_shmem_address[i] = NULL;
+    all_shmem_count[i] = 0;
+  }
+}
+
+// free shared memory if no process is using it
+void freeshmem(struct proc* proc){
+  int i = 0;
+  for (; i < 4; i ++){
+    if (proc->shmem_address[i] != NULL){
+      if (all_shmem_address[i] != NULL){
+        all_shmem_count[i] --;
+        if (all_shmem_count[i] == 0){
+          kfree((char*) all_shmem_address[i]);
+        }
+      }
+    }
+  }
+}
+
+
 // Request shared memory access by a process
 void* shmem_access(int page_number)
 {
-  
+  if (proc->shmem_count >= 4){
+    panic("Already requested 4 shared pages.");
+    return NULL;
+  }
+
+  if (page_number < 0 || page_number > 3){
+    panic("Invalid page number. Valid page numbers: 0,1,2,3.");
+    return NULL;
+  }
+
+  // if the process has requested that shared page before
+  if (proc->shemem_address[page_number] != NULL){
+    //TODO mappage again?
+    return proc->shemem_address[page_number];
+  }
+
+  void* new_address = (void*)(USERTOP - proc->nshmems * PGSIZE - PGSIZE);
+  if (proc->sz >= (int) new_address){
+    panic("Not enough space.");
+    return NULL;
+  }
+
+  //TODO: kalloc regardless whether all_shmem_count[page_number] == 0 or not?
+
+  if (all_shmem_count[page_number] == 0){
+    if ((all_shmem_address[page_number] = kalloc()) == 0){
+      panic("Cannot allocate physical memory.");
+      return NULL;
+    }
+  }
+
+  if (mappages(proc->pgdir, new_address, PGSIZE, PADDR(all_shmem_address[page_number]), PTE_W|PTE_U) < 0){
+    panic("Cannot create PTE for linear address that refers to physical address.");
+    return NULL;
+  }
+
+  all_shmem_count[page_number]++;
+  proc->shmem_count[page_number]++;
+  proc->shmem_address[page_number] = new_address;
+
+  return new_address;
 }
 
 // Count number of process using the shared page
 int shmem_count(int page_number)
 {
+  if (page_number < 0 || page_number > 3){
+    panic("Invalid page number. Valid page numbers: 0,1,2,3.");
+    return -1;
+  }
 
+  return all_shmem_count[page_number];
 }
