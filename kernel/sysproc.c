@@ -107,7 +107,7 @@ sys_getprocs(void)
 int
 sys_shmem_access(void){
   int page_number;
-  if (argint(0, page_number) < 0){
+  if (argint(0, &page_number) < 0){
     return -1;
   }
   return (int)shmem_access(page_number);
@@ -116,7 +116,7 @@ sys_shmem_access(void){
 int
 sys_shmem_count(void){
   int page_number;
-  if (argint(0, page_number) < 0){
+  if (argint(0, &page_number) < 0){
     return -1;
   }
   return shmem_count(page_number);

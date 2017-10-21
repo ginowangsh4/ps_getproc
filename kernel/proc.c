@@ -164,14 +164,8 @@ fork(void)
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
 
-  np->shmem_count = proc->shmem_count;
-  int i = 0;
-  for (; i < 4; i ++){
-    np->shmem_address[i] = proc->shmem_address[i];
-    if (np->shmem_address[i] != NULL){
-      all_shmem_count[i] ++;
-    }
-  }
+  copy_shmem(np, proc);
+  
   return pid;
 }
 

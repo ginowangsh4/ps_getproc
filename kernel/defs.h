@@ -172,6 +172,7 @@ void            shmeminit(void);
 void            freeshmem(struct proc* proc);
 void*           shmem_access(int page_number);
 int             shmem_count(int page_number);
+void            copy_shmem(struct proc* np, struct proc* proc);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

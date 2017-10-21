@@ -88,9 +88,9 @@ exec(char *path, char **argv)
   proc->tf->esp = sp;
   proc->shmem_count = 0;
   switchuvm(proc);
-  int i = 0;
-  for (; i < 4; i ++){
-    proc->shmem_address[i] = NULL;
+  int j = 0;
+  for (; j < 4; j ++){
+    proc->shmem_address[j] = NULL;
   }
   freevm(oldpgdir);
 
