@@ -31,14 +31,14 @@ whenRequestingSharedMemory_ValidAddressIsReturned(void)
   char* secondHighestPage = (char*)(USERTOP - 2*PGSIZE);
   char* thirdHighestPage =  (char*)(USERTOP - 3*PGSIZE);
   char* fourthHighestPage = (char*)(USERTOP - 4*PGSIZE);
-  
+
   if(sharedPage == highestPage ||
      sharedPage == secondHighestPage ||
      sharedPage == thirdHighestPage ||
      sharedPage == fourthHighestPage) {
     testPassed();
   } else {
-    testFailed(); 
+    testFailed();
   }
 }
 
@@ -200,7 +200,7 @@ main(void)
     exit();
   }
   wait();
-  
+
   pid = fork();
   if(pid == 0){
     afterRequestingSharedMemory_countReturns1();

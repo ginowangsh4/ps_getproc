@@ -165,7 +165,7 @@ fork(void)
   safestrcpy(np->name, proc->name, sizeof(proc->name));
 
   copy_shmem(np, proc);
-  
+
   return pid;
 }
 
