@@ -75,6 +75,8 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  void *shmem_address[4];      // store the address of shared page if that page has been requested
+  int shmem_count;             // number of share pages that have been requested
 };
 
 int getprocs(struct ProcessInfo*);

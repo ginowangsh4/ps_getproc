@@ -231,7 +231,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
   char *mem;
   uint a;
 
-  if(newsz + PGSIZE > USERTOP)
+  if(newsz + PGSIZE + PGSIZE * proc->shmem_count > USERTOP)
     return 0;
   if(newsz < oldsz)
     return oldsz;
@@ -286,7 +286,7 @@ freevm(pde_t *pgdir)
 
   if(pgdir == 0)
     panic("freevm: no pgdir");
-  deallocuvm(pgdir, USERTOP - PGSIZE, 0);
+  deallocuvm(pgdir, USERTOP - PGSIZE - PGSIZE * 4, 0);
   for(i = 0; i < NPDENTRIES; i++){
     if(pgdir[i] & PTE_P)
       kfree((char*)PTE_ADDR(pgdir[i]));
@@ -367,14 +367,102 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+int all_shmem_count[4];
+void* all_shmem_address[4];
+
+// initialize shared memory
+void shmeminit(void){
+  int i;
+  for(i = 0; i < 4; i ++){
+    all_shmem_address[i] = NULL;
+    all_shmem_count[i] = 0;
+  }
+}
+
+// free shared memory if no process is using it
+void freeshmem(struct proc* proc){
+  int i;
+  for (i = 0; i < 4; i ++){
+    if (proc->shmem_address[i] != NULL){
+      if (all_shmem_address[i] != NULL){
+        all_shmem_count[i] --;
+        if (all_shmem_count[i] == 0){
+          kfree((char*) all_shmem_address[i]);
+        }
+      }
+    }
+  }
+}
+
+
+// let the child inheret its parent's shared memory
+void copy_shmem(struct proc* np, struct proc* proc){
+  np->shmem_count = proc->shmem_count;
+  int j;
+  for (j = 0; j < 4; j ++){
+    if (proc->shmem_address[j] != NULL){
+      np->shmem_address[j] = proc->shmem_address[j];
+      all_shmem_count[j]++;
+    }
+  }
+}
+
+
 // Request shared memory access by a process
 void* shmem_access(int page_number)
 {
-  
+  if (proc->shmem_count >= 4){
+    panic("Already requested 4 shared pages.");
+    return NULL;
+  }
+
+  if (page_number < 0 || page_number > 3){
+    panic("Invalid page number. Valid page numbers: 0,1,2,3.");
+    return NULL;
+  }
+
+
+  // if the process has requested that shared page before
+  if (proc->shmem_address[page_number] != NULL){
+    if (mappages(proc->pgdir, proc->shmem_address[page_number], PGSIZE, PADDR(all_shmem_address[page_number]), PTE_W|PTE_U) < 0){
+      panic("Cannot create PTE for linear address that refers to physical address.");
+      return NULL;
+    }
+    return proc->shmem_address[page_number];
+  }
+
+  void* new_address = (void*)(USERTOP - proc->shmem_count * PGSIZE - PGSIZE);
+  if (proc->sz >= (uint) new_address){
+    panic("Not enough space.");
+    return NULL;
+  }
+
+
+  if ((all_shmem_address[page_number] = kalloc()) == 0){
+    panic("Cannot allocate physical memory.");
+    return NULL;
+  }
+
+
+  if (mappages(proc->pgdir, new_address, PGSIZE, PADDR(all_shmem_address[page_number]), PTE_W|PTE_U) < 0){
+    panic("Cannot create PTE for linear address that refers to physical address.");
+    return NULL;
+  }
+
+  all_shmem_count[page_number]++;
+  proc->shmem_count++;
+  proc->shmem_address[page_number] = new_address;
+
+  return new_address;
 }
 
 // Count number of process using the shared page
 int shmem_count(int page_number)
 {
+  if (page_number < 0 || page_number > 3){
+    panic("Invalid page number. Valid page numbers: 0,1,2,3.");
+    return -1;
+  }
 
+  return all_shmem_count[page_number];
 }
