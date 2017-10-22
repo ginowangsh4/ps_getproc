@@ -464,5 +464,9 @@ int shmem_count(int page_number)
     return -1;
   }
 
+  if (proc->shmem_count < 0 || proc->shmem_count > 3){
+    return -1;
+  }
+
   return all_shmem_count[page_number];
 }
