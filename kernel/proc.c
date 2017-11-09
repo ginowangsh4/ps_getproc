@@ -493,6 +493,7 @@ clone(void(*fcn)(void*), void* arg, void* stack)
 
   tid = nt->pid;
   nt->isThread = 1;
+  nt->ustack = (char*)stack;
 
   // copy parent's file descriptors and current directory
   for(i = 0; i < NOFILE; i++){
@@ -533,7 +534,7 @@ join(int pid)
   if(proc->pid == pid){
     return -1;
   }
-  struct proc *p, *pp;
+  struct proc *p;
   acquire(&ptable.lock);
 
 
@@ -570,6 +571,33 @@ join(int pid)
       }
     }
 
+    if(found == 0 || proc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+    sleep(proc, &ptable.lock);
+  }
+}
+
+// find the user stack of a thread
+int
+find_ustack(int pid)
+{
+  struct proc *p;
+  acquire(&ptable.lock);
+
+  for(;;){
+    int found = 0;
+    // find the proc with desired pid
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->pid == pid){
+        found = 1;
+        if(p->state == ZOMBIE){
+          release(&ptable.lock);
+          return (int)p->ustack;
+        }
+      }
+    }
     if(found == 0 || proc->killed){
       release(&ptable.lock);
       return -1;
