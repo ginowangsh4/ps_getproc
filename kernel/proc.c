@@ -5,7 +5,6 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-#include "ProcessInfo.h"
 
 struct {
   struct spinlock lock;
@@ -68,12 +67,6 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
-
-  p->shmem_count = 0;
-  int i = 0;
-  for (; i < 4; i ++){
-    p->shmem_address[i] = NULL;
-  }
 
   return p;
 }
@@ -163,9 +156,6 @@ fork(void)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
-
-  copy_shmem(np, proc);
-
   return pid;
 }
 
@@ -205,8 +195,6 @@ exit(void)
         wakeup1(initproc);
     }
   }
-
-  freeshmem(proc);
 
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
@@ -455,26 +443,15 @@ procdump(void)
   }
 }
 
-// Return the number of processes in the process table
-// Return -1 if none
+// create a thread
 int
-getprocs(struct ProcessInfo* processInfoTable) {
-  int count = 0;
-  int i;
-  struct proc *currentproc;
-  for (currentproc = ptable.proc, i = 0; currentproc < &ptable.proc[NPROC] && i < NPROC; currentproc++, i++) {
-    if (currentproc->state == UNUSED)
-      continue;
-    processInfoTable[i].pid = currentproc->pid;
-    // The parent process id of the first process is meaningless. For this value, print -1.
-    processInfoTable[i].ppid = i == 0 ? -1 : currentproc->parent->pid;
-    processInfoTable[i].state = currentproc->state;
-    processInfoTable[i].sz = currentproc->sz;
-    int j;
-    for (j = 0; j < 16; j++)
-      processInfoTable[i].name[j] = currentproc->name[j];
-    // Increment number of running processes found
-    count++;
-  }
-  return count;
+clone(void(*fcn)(void*), void* arg, void* stack)
+{
+
+}
+
+int
+join(int pid)
+{
+  
 }

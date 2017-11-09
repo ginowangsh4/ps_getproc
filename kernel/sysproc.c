@@ -5,13 +5,27 @@
 #include "mmu.h"
 #include "proc.h"
 #include "sysfunc.h"
-#include "ProcessInfo.h"
-
 
 int
 sys_fork(void)
 {
   return fork();
+}
+
+int
+sys_clone(void(*fcn)(void*), void* arg, void* stack)
+{
+  void *fcn;
+  void *arg;
+  void *stack;
+  return clone(fcn, arg, stack);
+}
+
+int
+sys_join(void)
+{
+  int pid;
+  return join(pid);
 }
 
 int
@@ -89,35 +103,4 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
-}
-
-// return the number of current processes in the kernel which is
-// the number of entries in the kernel's process table that are
-// in any state other than UNUSED
-int
-sys_getprocs(void)
-{
-  // construct the proc info table
-  struct ProcessInfo *p;
-  if (argptr(0, (char**) &p, sizeof(struct ProcessInfo) * NPROC) < 0)
-    return -1;
-  return getprocs(p);
-}
-
-int
-sys_shmem_access(void){
-  int page_number;
-  if (argint(0, &page_number) < 0){
-    return -1;
-  }
-  return (int)shmem_access(page_number);
-}
-
-int
-sys_shmem_count(void){
-  int page_number;
-  if (argint(0, &page_number) < 0){
-    return -1;
-  }
-  return shmem_count(page_number);
 }

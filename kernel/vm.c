@@ -412,12 +412,10 @@ void copy_shmem(struct proc* np, struct proc* proc){
 void* shmem_access(int page_number)
 {
   if (proc->shmem_count >= 4){
-    panic("Already requested 4 shared pages.");
     return NULL;
   }
 
   if (page_number < 0 || page_number > 3){
-    panic("Invalid page number. Valid page numbers: 0,1,2,3.");
     return NULL;
   }
 
@@ -425,7 +423,6 @@ void* shmem_access(int page_number)
   // if the process has requested that shared page before
   if (proc->shmem_address[page_number] != NULL){
     if (mappages(proc->pgdir, proc->shmem_address[page_number], PGSIZE, PADDR(all_shmem_address[page_number]), PTE_W|PTE_U) < 0){
-      panic("Cannot create PTE for linear address that refers to physical address.");
       return NULL;
     }
     return proc->shmem_address[page_number];
@@ -433,19 +430,16 @@ void* shmem_access(int page_number)
 
   void* new_address = (void*)(USERTOP - proc->shmem_count * PGSIZE - PGSIZE);
   if (proc->sz >= (uint) new_address){
-    panic("Not enough space.");
     return NULL;
   }
 
 
   if ((all_shmem_address[page_number] = kalloc()) == 0){
-    panic("Cannot allocate physical memory.");
     return NULL;
   }
 
 
   if (mappages(proc->pgdir, new_address, PGSIZE, PADDR(all_shmem_address[page_number]), PTE_W|PTE_U) < 0){
-    panic("Cannot create PTE for linear address that refers to physical address.");
     return NULL;
   }
 
@@ -460,7 +454,6 @@ void* shmem_access(int page_number)
 int shmem_count(int page_number)
 {
   if (page_number < 0 || page_number > 3){
-    panic("Invalid page number. Valid page numbers: 0,1,2,3.");
     return -1;
   }
 
