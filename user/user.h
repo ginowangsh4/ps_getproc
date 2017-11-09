@@ -40,5 +40,7 @@ void* malloc(uint);
 void free(void*);
 int atoi(const char*);
 
-#endif // _USER_H_
+// user library to use thread
 
+
+#endif // _USER_H_

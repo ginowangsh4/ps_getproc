@@ -213,12 +213,19 @@ exit(void)
           wakeup1(initproc);
       }
     }
-
-    // Jump into the scheduler, never to return.
-    proc->state = ZOMBIE;
-    sched();
-    panic("zombie exit");
   }
+  else{
+    acquire(&ptable.lock);
+    iput(proc->cwd);
+    proc->cwd = 0;
+    wakeup1(proc->parent);
+  }
+
+  // Jump into the scheduler, never to return.
+  proc->state = ZOMBIE;
+  sched();
+  panic("zombie exit");
+
 }
 
 // Wait for a child process to exit and return its pid.
@@ -466,34 +473,41 @@ procdump(void)
 int
 clone(void(*fcn)(void*), void* arg, void* stack)
 {
-  int pid;
+  int tid;
   struct proc* nt;
 
   // make sure stack is page-aligned
-  if((uint)stack % PGSIZE) {
+  if((uint)stack % PGSIZE != 0) {
     return -1;
   }
 
-  // TODO check that the full page has been allocated to the process
-  if((uint)stack > ????????? || (uint)stack+PGSIZE < ?????????)
+  // check that the full page has been allocated to the process
+  if((uint)stack < 0  || (uint)stack+PGSIZE > proc->sz) {
     return -1;
+  }
 
   // Allocate process.
-  if((nt = allocproc()) == 0)
+  if((nt = allocproc()) == 0) {
     return -1;
-  pid = nt->pid;
+  }
+
+  tid = nt->pid;
+  nt->isThread = 1;
 
   // copy parent's file descriptors and current directory
-  for(i = 0; i < NOFILE; i++)
-    if(proc->ofile[i])
+  for(i = 0; i < NOFILE; i++){
+    if(proc->ofile[i]){
       nt->ofile[i] = filedup(proc->ofile[i]);
+    }
+  }
   nt->cwd = idup(proc->cwd);
 
   // thread has the same address space as its parent
   nt->pgdir = proc->pdgir;
+  nt->sz = proc->sz;
 
   // put fcn into eip
-  nt->tf->eip = fcn;
+  nt->tf->eip = (uint)fcn;
 
   // set return address and arguments for fcn
   nt->tf->eax = 0xffffffff;
@@ -507,47 +521,59 @@ clone(void(*fcn)(void*), void* arg, void* stack)
     nt->parent = proc->parent;
   }
 
-  return pid;
+  nt->state = RUNNABLE;
+  safestrcpy(nt->name, proc->name, sizeof(proc->name));
+  return tid;
 }
 
 int
 join(int pid)
 {
+  // cannot wait for itself
+  if(proc->pid == pid){
+    return -1;
+  }
   struct proc *p, *pp;
   acquire(&ptable.lock);
-  int found = 0;
 
-  // find the proc with desired pid
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->pid == pid){
-      pp = p;
-      found = 1;
+
+  for(;;){
+    int found = 0;
+    // find the proc with desired pid
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->pid == pid){
+        found = 1;
+
+        // return -1 if pp is a process
+        if(p->isThread == 0){
+          release(&ptable.lock);
+          return -1;
+        }
+
+        // if process, found thread must be its child; if thread, must have the same parent
+        if((proc->isThread == 0 && p->parent != proc) || (proc->isThread == 1 && p->parent != proc->parent)){
+          release(&ptable.lock);
+          return -1;
+        }
+
+        if(p->state == ZOMBIE){
+          kfree(p->kstack);
+          p->kstack = 0;
+          p->state = UNUSED;
+          p->pid = 0;
+          p->parent = 0;
+          p->name[0] = 0;
+          p->killed = 0;
+          release(&ptable.lock);
+          return pid;
+        }
+      }
     }
-  }
 
-  if(found == 0){
-    release(&ptable.lock);
-    return -1;
+    if(found == 0 || proc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+    sleep(proc, &ptable.lock);
   }
-
-  // return -1 if pp is a process or pp's parent is not the current process
-  if(pp->isThread == 0 || pp->parent != proc){
-    release(&ptable.lock);
-    return -1;
-  }
-
-  if(pp->state == ZOMBIE){
-    kfree(p->kstack);
-    p->kstack = 0;
-    p->state = UNUSED;
-    p->pid = 0;
-    p->parent = 0;
-    p->name[0] = 0;
-    p->killed = 0;
-    release(&ptable.lock);
-    return pid;
-  }
-
-  sleep(proc, &ptable.lock);
-  return pid;
 }
