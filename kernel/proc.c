@@ -234,7 +234,7 @@ wait(void)
     // Scan through table looking for zombie children.
     havekids = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->parent != proc)
+      if(p->parent != proc || p->isThread == 1)
         continue;
       havekids = 1;
       if(p->state == ZOMBIE){
@@ -475,6 +475,8 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   }
 
   // TODO check that the full page has been allocated to the process
+  if((uint)stack > ????????? || (uint)stack+PGSIZE < ?????????)
+    return -1;
 
   // Allocate process.
   if((nt = allocproc()) == 0)
@@ -511,5 +513,41 @@ clone(void(*fcn)(void*), void* arg, void* stack)
 int
 join(int pid)
 {
+  struct proc *pp;
+  acquire(&ptable.lock);
+  int found = 0;
 
+  // find the proc with desired pid
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->pid == pid){
+      pp = p;
+      found = 1;
+    }
+  }
+
+  if(found == 0){
+    release(&ptable.lock);
+    return -1;
+  }
+
+  // return -1 if pp is a process or pp's parent is not the current process
+  if(pp->isThread == 0 || pp->parent != proc){
+    release(&ptable.lock);
+    return -1;
+  }
+
+  if(pp->state == ZOMBIE){
+    kfree(p->kstack);
+    p->kstack = 0;
+    p->state = UNUSED;
+    p->pid = 0;
+    p->parent = 0;
+    p->name[0] = 0;
+    p->killed = 0;
+    release(&ptable.lock);
+    return pid;
+  }
+
+  sleep(proc, &ptable.lock);
+  return pid;
 }
