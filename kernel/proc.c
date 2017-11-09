@@ -67,6 +67,7 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+  p->isThread = 0;
 
   return p;
 }
@@ -107,17 +108,32 @@ int
 growproc(int n)
 {
   uint sz;
-
+  initlock(proc->lock, "proc");
+  // lock the address space if caller is a thread
+  if (p->isThread == 1) {
+    accquire(proc->lock);
+  }
   sz = proc->sz;
   if(n > 0){
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
+      // release the lock
+      if (p->isThread == 1) {
+        release(proc->lock);
+      }
       return -1;
   } else if(n < 0){
     if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0)
+      // release the lock
+      if (p->isThread == 1) {
+        release(proc->lock);
+      }
       return -1;
   }
   proc->sz = sz;
   switchuvm(proc);
+  if (p->isThread == 1) {
+    release(proc->lock);
+  }
   return 0;
 }
 
@@ -171,35 +187,38 @@ exit(void)
   if(proc == initproc)
     panic("init exiting");
 
-  // Close all open files.
-  for(fd = 0; fd < NOFILE; fd++){
-    if(proc->ofile[fd]){
-      fileclose(proc->ofile[fd]);
-      proc->ofile[fd] = 0;
+  // only close files, kill children, etc. if proc is a process instead of thread
+  if (proc->isThread == 0){
+    // Close all open files.
+    for(fd = 0; fd < NOFILE; fd++){
+      if(proc->ofile[fd]){
+        fileclose(proc->ofile[fd]);
+        proc->ofile[fd] = 0;
+      }
     }
-  }
 
-  iput(proc->cwd);
-  proc->cwd = 0;
+    iput(proc->cwd);
+    proc->cwd = 0;
 
-  acquire(&ptable.lock);
+    acquire(&ptable.lock);
 
-  // Parent might be sleeping in wait().
-  wakeup1(proc->parent);
+    // Parent might be sleeping in wait().
+    wakeup1(proc->parent);
 
-  // Pass abandoned children to init.
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->parent == proc){
-      p->parent = initproc;
-      if(p->state == ZOMBIE)
-        wakeup1(initproc);
+    // Pass abandoned children to init.
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->parent == proc){
+        p->parent = initproc;
+        if(p->state == ZOMBIE)
+          wakeup1(initproc);
+      }
     }
-  }
 
-  // Jump into the scheduler, never to return.
-  proc->state = ZOMBIE;
-  sched();
-  panic("zombie exit");
+    // Jump into the scheduler, never to return.
+    proc->state = ZOMBIE;
+    sched();
+    panic("zombie exit");
+  }
 }
 
 // Wait for a child process to exit and return its pid.
@@ -447,7 +466,46 @@ procdump(void)
 int
 clone(void(*fcn)(void*), void* arg, void* stack)
 {
+  int pid;
+  struct proc* nt;
 
+  // make sure stack is page-aligned
+  if((uint)stack % PGSIZE) {
+    return -1;
+  }
+
+  // TODO check that the full page has been allocated to the process
+
+  // Allocate process.
+  if((nt = allocproc()) == 0)
+    return -1;
+  pid = nt->pid;
+
+  // copy parent's file descriptors and current directory
+  for(i = 0; i < NOFILE; i++)
+    if(proc->ofile[i])
+      nt->ofile[i] = filedup(proc->ofile[i]);
+  nt->cwd = idup(proc->cwd);
+
+  // thread has the same address space as its parent
+  nt->pgdir = proc->pdgir;
+
+  // put fcn into eip
+  nt->tf->eip = fcn;
+
+  // set return address and arguments for fcn
+  nt->tf->eax = 0xffffffff;
+  nt->tf->edi = arg;
+
+  // point parent
+  if (proc->isThread == 0){
+    nt->parent = proc;
+  }
+  else{
+    nt->parent = proc->parent;
+  }
+
+  return pid;
 }
 
 int
