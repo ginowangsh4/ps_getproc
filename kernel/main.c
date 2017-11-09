@@ -21,14 +21,14 @@ main(void)
   lapicinit(mpbcpu());
   seginit();       // set up segments
   kinit();         // initialize memory allocator
-  jmpkstack();       // call mainc() on a properly-allocated stack
+  jmpkstack();       // call mainc() on a properly-allocated stack 
 }
 
 void
 jmpkstack(void)
 {
   char *kstack, *top;
-
+  
   kstack = kalloc();
   if(kstack == 0)
     panic("jmpkstack kalloc");
@@ -62,7 +62,6 @@ mainc(void)
   cinit();
   sti();           // enable inturrupts
   userinit();      // first user process
-  shmeminit();
   scheduler();     // start running processes
 }
 
@@ -124,3 +123,4 @@ bootothers(void)
 }
 
 // Blank page.
+
