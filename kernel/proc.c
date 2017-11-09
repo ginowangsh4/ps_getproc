@@ -513,7 +513,7 @@ clone(void(*fcn)(void*), void* arg, void* stack)
 int
 join(int pid)
 {
-  struct proc *pp;
+  struct proc *p, *pp;
   acquire(&ptable.lock);
   int found = 0;
 
