@@ -16,7 +16,21 @@ USER_PROGS := \
 	tester\
 	usertests\
 	wc\
-	zombie
+	zombie\
+	badclone\
+	clone\
+	clone2\
+	clone3\
+	cond\
+	cond2\
+	cond3\
+	join\
+	join2\
+	join3\
+	join4\
+	thread\
+	thread2\
+	stack\
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 
@@ -102,4 +116,3 @@ user/%.d: user/%.c
 user/%.d: user/%.S
 	$(CC) $(CPPFLAGS) $(USER_CPPFLAGS) $(ASFLAGS) $(USER_ASFLAGS) \
 		-M -MG $< -MF $@ -MT $@ -MT $(<:.S=.o)
-

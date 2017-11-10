@@ -3,8 +3,9 @@
 #include "param.h"
 #include "mmu.h"
 #include "x86.h"
-#include "proc.h"
 #include "spinlock.h"
+#include "proc.h"
+
 
 struct {
   struct spinlock lock;
@@ -108,31 +109,45 @@ int
 growproc(int n)
 {
   uint sz;
-  initlock(proc->lock, "proc");
-  // lock the address space if caller is a thread
-  if (p->isThread == 1) {
-    accquire(proc->lock);
+
+  // lock the address space
+  if (proc->isThread == 1) {
+    acquire(&proc->parent->lock);
+  }
+  else{
+    acquire(&proc->lock);
   }
   sz = proc->sz;
   if(n > 0){
-    if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
+    if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0){
       // release the lock
-      if (p->isThread == 1) {
-        release(proc->lock);
+      if (proc->isThread == 0) {
+        release(&proc->lock);
+      }
+      else{
+        release(&proc->parent->lock);
       }
       return -1;
+    }
   } else if(n < 0){
-    if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0)
+    if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0){
       // release the lock
-      if (p->isThread == 1) {
-        release(proc->lock);
+      if (proc->isThread == 0) {
+        release(&proc->lock);
+      }
+      else{
+        release(&proc->parent->lock);
       }
       return -1;
+    }
   }
   proc->sz = sz;
   switchuvm(proc);
-  if (p->isThread == 1) {
-    release(proc->lock);
+  if (proc->isThread == 0) {
+    release(&proc->lock);
+  }
+  else{
+    release(&proc->parent->lock);
   }
   return 0;
 }
@@ -496,6 +511,7 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   nt->ustack = (char*)stack;
 
   // copy parent's file descriptors and current directory
+  int i;
   for(i = 0; i < NOFILE; i++){
     if(proc->ofile[i]){
       nt->ofile[i] = filedup(proc->ofile[i]);
@@ -504,15 +520,15 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   nt->cwd = idup(proc->cwd);
 
   // thread has the same address space as its parent
-  nt->pgdir = proc->pdgir;
+  nt->pgdir = proc->pgdir;
   nt->sz = proc->sz;
 
   // put fcn into eip
   nt->tf->eip = (uint)fcn;
 
   // set return address and arguments for fcn
-  nt->tf->eax = 0xffffffff;
-  nt->tf->edi = arg;
+  nt->tf->eax = (uint)0xffffffff;
+  nt->tf->edi = (uint)arg;
 
   // point parent
   if (proc->isThread == 0){
@@ -615,18 +631,18 @@ cv_wait(cond_t* conditionVariable, lock_t* lock)
   if(lock == 0)
     panic("sleep without lk");
 
-  if(lock != &ptable.lock){
+  if(lock != (lock_t*)&ptable.lock){
     acquire(&ptable.lock);
     lock_t_release(lock);
   }
 
-  proc->chan = chan;
+  proc->chan = (void*)conditionVariable;
   proc->state = SLEEPING;
   sched();
 
   proc->chan = 0;
 
-  if(lk != &ptable.lock){
+  if(lock != (lock_t*)&ptable.lock){
     release(&ptable.lock);
     lock_t_acquire(lock);
   }
@@ -635,7 +651,7 @@ cv_wait(cond_t* conditionVariable, lock_t* lock)
 void
 cv_signal(cond_t* conditionVariable)
 {
-  struct *p;
+  struct proc *p;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if (p->state == SLEEPING && p->chan == (void*)conditionVariable) {
       p->state = RUNNABLE;
