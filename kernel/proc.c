@@ -47,6 +47,9 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   release(&ptable.lock);
+  p->isThread = 0;
+  p->parent = proc;
+  initlock(&p->lock, "proc");
 
   // Allocate kernel stack if possible.
   if((p->kstack = kalloc()) == 0){
@@ -68,7 +71,6 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
-  p->isThread = 0;
 
   return p;
 }
@@ -105,6 +107,7 @@ userinit(void)
 
 // Grow current process's memory by n bytes.
 // Return 0 on success, -1 on failure.
+
 int
 growproc(int n)
 {
@@ -190,9 +193,9 @@ fork(void)
   return pid;
 }
 
-// Exit the current process.  Does not return.
-// An exited process remains in the zombie state
-// until its parent calls wait() to find out it exited.
+// // Exit the current process.  Does not return.
+// // An exited process remains in the zombie state
+// // until its parent calls wait() to find out it exited.
 void
 exit(void)
 {
@@ -245,6 +248,8 @@ exit(void)
 
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
+
+
 int
 wait(void)
 {
@@ -509,6 +514,10 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   tid = nt->pid;
   nt->isThread = 1;
   nt->ustack = (char*)stack;
+  *(nt->tf) = *(proc->tf);
+  // thread has the same address space as its parent
+  nt->pgdir = proc->pgdir;
+  nt->sz = proc->sz;
 
   // copy parent's file descriptors and current directory
   int i;
@@ -519,16 +528,16 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   }
   nt->cwd = idup(proc->cwd);
 
-  // thread has the same address space as its parent
-  nt->pgdir = proc->pgdir;
-  nt->sz = proc->sz;
+  *((uint*)(stack + PGSIZE - 8)) = 0xffffffff; // Prequirement 07
+  *((void**)(stack + PGSIZE - 4)) = arg;
+  // nt->tf->esp = (uint)stack;
+  // if (copyout(proc->pgdir, nt->tf->esp, (void*)stack, (uint)PGSIZE) < 0) return -1;
+  nt->tf->esp = (uint)(stack + PGSIZE - 8);
+  // END: Prequirement 05
+  nt->tf->eip = (uint)fcn; // Prequirement 04
+  // thread->tf->ebp = arg;
 
-  // put fcn into eip
-  nt->tf->eip = (uint)fcn;
-
-  // set return address and arguments for fcn
-  nt->tf->eax = (uint)0xffffffff;
-  nt->tf->edi = (uint)arg;
+  nt->tf->eax = 0;
 
   // point parent
   if (proc->isThread == 0){

@@ -31,15 +31,21 @@ USER_PROGS := \
 	thread\
 	thread2\
 	stack\
+	locks\
+	multi\
+	noexit\
+	race\
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 
 # user library files
 USER_LIBS := \
 	ulib.o\
+	uthreadlib.o\
 	usys.o\
 	printf.o\
-	umalloc.o
+	umalloc.o\
+
 
 USER_LIBS := $(addprefix user/, $(USER_LIBS))
 

@@ -1,9 +1,12 @@
 #include "types.h"
-#include "stat.h"
 #include "user.h"
 #include "x86.h"
 
-int thread_create(void (*start_routine)(void*), void* arg) {
+#define PGSIZE 4096
+
+int
+thread_create(void (*start_routine)(void*), void* arg)
+{
   void* stack = malloc(PGSIZE*2); // allocate 2 pages of space
   if((uint)stack % PGSIZE) {
     // make sure that stack is page-aligned
@@ -13,7 +16,9 @@ int thread_create(void (*start_routine)(void*), void* arg) {
   return tid;
 }
 
-int thread_join(int pid) {
+int
+thread_join(int pid)
+{
   int ustack;
   if ((ustack = find_ustack(pid)) < 0) {
     return -1;
@@ -33,12 +38,4 @@ void lock_release(lock_t* lock) {
 
 void lock_init(lock_t* lock) {
   *lock = 0;
-}
-
-void cv_wait(cond_t* conditionVariable, lock_t* lock){
-
-}
-
-void cv_signal(cond_t* conditionVariable){
-
 }

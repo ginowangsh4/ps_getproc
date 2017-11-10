@@ -1,4 +1,4 @@
-/* join argument checking */
+/* no exit call in thread, should trap at bogus address */
 #include "types.h"
 #include "user.h"
 
@@ -25,20 +25,13 @@ main(int argc, char *argv[])
 {
    ppid = getpid();
 
-   void *stack = malloc(PGSIZE*2);
-   assert(stack != NULL);
-   if((uint)stack % PGSIZE)
-     stack = stack + (4096 - (uint)stack % PGSIZE);
-
    int arg = 42;
-   int clone_pid = clone(worker, &arg, stack);
-   assert(clone_pid > 0);
+   void *arg_ptr = &arg;
+   int thread_pid = thread_create(worker, arg_ptr);
+   assert(thread_pid > 0);
 
-   sbrk(PGSIZE);
-   // void **join_stack = (void**) ((uint)sbrk(0) - 4);
-   // assert(join((void**)((uint)join_stack + 2)) == -1);
-   assert(join(clone_pid) == clone_pid);
-   // assert(stack == *join_stack);
+   int join_pid = thread_join(thread_pid);
+   assert(join_pid == thread_pid);
    assert(global == 2);
 
    printf(1, "TEST PASSED\n");
@@ -51,5 +44,6 @@ worker(void *arg_ptr) {
    assert(arg == 42);
    assert(global == 1);
    global++;
-   exit();
+   // no exit() in thread
 }
+

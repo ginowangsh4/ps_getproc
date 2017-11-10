@@ -14,26 +14,6 @@ sys_fork(void)
 }
 
 int
-sys_clone(void)
-{
-  void (*fcn)(void*);
-  void *arg;
-  void *stack;
-  if (argptr(0, (char**)&fcn, 4) < 0) return -1;
-  if (argptr(1, (char**)&arg, 4) < 0) return -1;
-  if (argptr(2, (char**)&stack, 2 * PGSIZE) < 0) return -1;
-  return clone(fcn, arg, stack);
-}
-
-int
-sys_join(void)
-{
-  int pid;
-  if (argint(0, &pid)) return -1;
-  return join(pid);
-}
-
-int
 sys_exit(void)
 {
   exit();
@@ -110,13 +90,27 @@ sys_uptime(void)
   return xticks;
 }
 
+
 int
-sys_find_ustack(void)
+sys_clone(void)
+{
+  void (*fcn)(void*);
+  void *arg;
+  void *stack;
+  if (argptr(0, (char**)&fcn, 4) < 0) return -1;
+  if (argptr(1, (char**)&arg, 4) < 0) return -1;
+  if (argptr(2, (char**)&stack, 2 * PGSIZE) < 0) return -1;
+  return clone(fcn, arg, stack);
+}
+
+int
+sys_join(void)
 {
   int pid;
-  if (argint(0, &pid) < 0) return -1;
-  return find_ustack(pid);
+  if (argint(0, &pid)) return -1;
+  return join(pid);
 }
+
 
 int
 sys_cv_wait(void)
@@ -139,4 +133,12 @@ sys_cv_signal(void)
   if (argptr(0, (char**)&conditionVariable, 4) < 0) return -1;
   cv_signal(conditionVariable);
   return 0;
+}
+
+int
+sys_find_ustack(void)
+{
+  int pid;
+  if (argint(0, &pid) < 0) return -1;
+  return find_ustack(pid);
 }
