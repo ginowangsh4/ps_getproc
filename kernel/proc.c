@@ -605,3 +605,15 @@ find_ustack(int pid)
     sleep(proc, &ptable.lock);
   }
 }
+
+void
+cv_wait(cond_t* conditionVariable, lock_t* lock)
+{
+
+}
+
+void
+cv_signal(cond_t* conditionVariable)
+{
+
+}
