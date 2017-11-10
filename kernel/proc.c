@@ -609,11 +609,36 @@ find_ustack(int pid)
 void
 cv_wait(cond_t* conditionVariable, lock_t* lock)
 {
+  if(proc == 0)
+    panic("sleep");
 
+  if(lock == 0)
+    panic("sleep without lk");
+
+  if(lock != &ptable.lock){
+    acquire(&ptable.lock);
+    lock_t_release(lock);
+  }
+
+  proc->chan = chan;
+  proc->state = SLEEPING;
+  sched();
+
+  proc->chan = 0;
+
+  if(lk != &ptable.lock){
+    release(&ptable.lock);
+    lock_t_acquire(lock);
+  }
 }
 
 void
 cv_signal(cond_t* conditionVariable)
 {
-
+  struct *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->state == SLEEPING && p->chan == (void*)conditionVariable) {
+      p->state = RUNNABLE;
+    }
+  }
 }
