@@ -107,7 +107,6 @@ userinit(void)
 
 // Grow current process's memory by n bytes.
 // Return 0 on success, -1 on failure.
-
 int
 growproc(int n)
 {
@@ -248,8 +247,6 @@ exit(void)
 
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
-
-
 int
 wait(void)
 {
@@ -528,14 +525,10 @@ clone(void(*fcn)(void*), void* arg, void* stack)
   }
   nt->cwd = idup(proc->cwd);
 
-  *((uint*)(stack + PGSIZE - 8)) = 0xffffffff; // Prequirement 07
+  *((uint*)(stack + PGSIZE - 8)) = 0xffffffff;
   *((void**)(stack + PGSIZE - 4)) = arg;
-  // nt->tf->esp = (uint)stack;
-  // if (copyout(proc->pgdir, nt->tf->esp, (void*)stack, (uint)PGSIZE) < 0) return -1;
   nt->tf->esp = (uint)(stack + PGSIZE - 8);
-  // END: Prequirement 05
-  nt->tf->eip = (uint)fcn; // Prequirement 04
-  // thread->tf->ebp = arg;
+  nt->tf->eip = (uint)fcn;
 
   nt->tf->eax = 0;
 

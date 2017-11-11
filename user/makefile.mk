@@ -19,22 +19,7 @@ USER_PROGS := \
 	zombie\
 	badclone\
 	clone\
-	clone2\
-	clone3\
-	cond\
-	cond2\
-	cond3\
 	join\
-	join2\
-	join3\
-	join4\
-	thread\
-	thread2\
-	stack\
-	locks\
-	multi\
-	noexit\
-	race\
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 
