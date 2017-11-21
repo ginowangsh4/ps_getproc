@@ -616,7 +616,7 @@ int
 tagFile(int fileDescriptor, char* key, char* value, int valueLength)
 {
   if (key == NULL || strlen(key) < 1 || strlen(key) > 9) return -1;
-  if (value == NULL || strlen(value) != valueLength || strlen(value) < 0 || strlen(key) > 18) return -1;
+  if (value == NULL || strlen(value) != valueLength || strlen(value) < 0 || strlen(value) > 18) return -1;
   if (fileDescriptor < 0 || fileDescriptor >= NOFILE) return -1;
   struct file* f;
   if ((f = proc->ofile[fileDescriptor]) == 0) return -1;
@@ -744,5 +744,87 @@ getFileTag(int fileDescriptor, char* key, char* buffer, int length)
 int
 getAllTags(int fileDescriptor, struct Key keys[], int maxTags)
 {
-  return -1;
+  if (maxTags < 0 || !keys) return -1;
+  if (fileDescriptor < 0 || fileDescriptor >= NOFILE) return -1;
+  struct file* f;
+  if ((f = proc->ofile[fileDescriptor]) == 0) return -1;
+  if (!f->writable || f->type != FD_INODE || !f->ip) return -1;
+
+  ilock(f->ip);
+
+  if (f->ip->tags == 0){
+    iunlock(f->ip);
+    return 1;
+  }
+
+  struct buf* bf;
+  bf = bread(f->ip->dev, f->ip->tags);
+  uchar* data;
+  data = (uchar*)bf->data; //&
+
+  int i;
+  int count = 0;
+  for (i = 0; i < BSIZE; i += 32){ // 32 is the size of a tag
+    if (data[i]){
+      if (count < maxTags){
+        memmove((void*)keys[count].key, (void*)((uint)data + i), (uint)strlen((char*)((uint)data + (uint)i)));
+      }
+      count++;
+    }
+  }
+  brelse(bf);
+  iunlock(f->ip);
+  return count;
+}
+
+int
+recordName(struct file* f, char* key, char* value, int valueLength, char* results, int resultsLength)
+{
+  int j = 0;
+  int k = 0;
+  struct buf *buffer;
+  uchar data[BSIZE];
+  buffer = bread(f->ip->dev, f->ip->tags);
+  memmove((void*)data, (void*)buffer->data, (uint)BSIZE);
+  brelse(buffer);
+
+  int existKeyPosition = 0;
+  int endOfValuePosition;
+  char *valuePosition;
+  if ((existKeyPosition = findKeyInBlock((uchar*)key, (uchar*)data)) >= 0) {
+    endOfValuePosition = 27;
+    while (endOfValuePosition >= 10 && !data[existKeyPosition + endOfValuePosition]){
+      endOfValuePosition--;
+    }
+    endOfValuePosition++; // point to the last byte of value
+    int actualValueLength = endOfValuePosition - 10;
+    if (actualValueLength == valueLength) {
+      // check value content
+      int j = 0;
+      while (j < valueLength && data[existKeyPosition + 10 + j] == value[j]) {
+        j++;
+      }
+      if (j == valueLength) {
+        struct dirent *entry;
+        char *filename;
+        int filenameLength = 0;
+        entry = (struct dirent*)data;
+        int end;
+        if (entry->inum) {
+          end = resultsLength - 1;
+          while (k >= 0 && !results[end]) end--;
+          end++;
+          if (end) end++;
+          filename = entry->name;
+          filenameLength = strlen(filename);
+          if (resultsLength - end >= filenameLength) {
+            memmove((void*)((uint)results + (uint)end), (void*)filename, (uint)filenameLength);
+            results[filenameLength] = NULL;
+            return 1;
+          }
+        }
+      }
+    }
+  }
+  return 0;
 }

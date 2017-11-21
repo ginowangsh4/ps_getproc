@@ -127,5 +127,21 @@ filewrite(struct file *f, char *addr, int n)
 int
 getFilesByTag(char* key, char* value, int valueLength, char* results, int resultsLength)
 {
-  return -1;
+  if (resultsLength < 0) return -1;
+  if (strlen(value) != valueLength) return -1;
+  if (key == NULL || strlen(key) < 1 || strlen(key) > 9) return 0;
+  if (value == NULL || valueLength < 0 || valueLength > 18) return 0;
+
+  int count = 0;
+  struct file *f;
+
+  acquire(&ftable.lock);
+  for (f = ftable.file; f < ftable.file + NFILE; f++) {
+    if (f->ip && f->ip->tags) {
+      count += recordName(f, key, value, valueLength, results, resultsLength);
+    }
+  }
+
+  release(&ftable.lock);
+  return count;
 }
