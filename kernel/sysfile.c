@@ -49,7 +49,7 @@ sys_dup(void)
 {
   struct file *f;
   int fd;
-  
+
   if(argfd(0, 0, &f) < 0)
     return -1;
   if((fd=fdalloc(f)) < 0)
@@ -87,7 +87,7 @@ sys_close(void)
 {
   int fd;
   struct file *f;
-  
+
   if(argfd(0, &fd, &f) < 0)
     return -1;
   proc->ofile[fd] = 0;
@@ -100,7 +100,7 @@ sys_fstat(void)
 {
   struct file *f;
   struct stat *st;
-  
+
   if(argfd(0, 0, &f) < 0 || argptr(1, (void*)&st, sizeof(*st)) < 0)
     return -1;
   return filestat(f, st);
@@ -312,7 +312,7 @@ sys_mknod(void)
   char *path;
   int len;
   int major, minor;
-  
+
   if((len=argstr(0, &path)) < 0 ||
      argint(1, &major) < 0 ||
      argint(2, &minor) < 0 ||
@@ -389,4 +389,39 @@ sys_pipe(void)
   fd[0] = fd0;
   fd[1] = fd1;
   return 0;
+}
+
+int sys_tagFile(void) {
+  int fileDescriptor;
+  char* key;
+  char* value;
+  int valueLength;
+
+  return tagFile(int fileDescriptor, char* key, char* value, int valueLength);
+}
+
+int sys_removeFileTag(void) {
+  int fileDescriptor;
+  char* key;
+
+  return removeFileTag(int fileDescriptor, char* key);
+}
+
+int sys_getFileTag(void) {
+  int fileDescriptor;
+  char* key;
+  char* buffer;
+  int length;
+  return getFileTag(int fileDescriptor, char* key, char* buffer, int length);
+}
+
+int sys_getAllTags(void) {
+  int fileDescriptor;
+  struct Key keys[];
+  int maxTags;
+  return getAllTags(int fileDescriptor, struct Key keys[], int maxTags);
+}
+
+int sys_getFilesByTag(void) {
+  return getFilesByTag(char* key, char* value, int valueLength, char* results, int resultsLength);
 }
