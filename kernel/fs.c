@@ -6,7 +6,7 @@
 //
 // Disk layout is: superblock, inodes, block in-use bitmap, data blocks.
 //
-// This file contains the low-level file system manipulation 
+// This file contains the low-level file system manipulation
 // routines.  The (higher-level) system call implementations
 // are in sysfile.c.
 
@@ -29,7 +29,7 @@ static void
 readsb(int dev, struct superblock *sb)
 {
   struct buf *bp;
-  
+
   bp = bread(dev, 1);
   memmove(sb, bp->data, sizeof(*sb));
   brelse(bp);
@@ -40,14 +40,14 @@ static void
 bzero(int dev, int bno)
 {
   struct buf *bp;
-  
+
   bp = bread(dev, bno);
   memset(bp->data, 0, BSIZE);
   bwrite(bp);
   brelse(bp);
 }
 
-// Blocks. 
+// Blocks.
 
 // Allocate a disk block.
 static uint
@@ -107,7 +107,7 @@ bfree(int dev, uint b)
 // the superblock.  The kernel keeps a cache of the in-use
 // on-disk structures to provide a place for synchronizing access
 // to inodes shared between multiple processes.
-// 
+//
 // ip->ref counts the number of pointer references to this cached
 // inode; references are typically kept in struct file and in proc->cwd.
 // When ip->ref falls to zero, the inode is no longer cached.
@@ -116,15 +116,15 @@ bfree(int dev, uint b)
 // Processes are only allowed to read and write inode
 // metadata and contents when holding the inode's lock,
 // represented by the I_BUSY flag in the in-memory copy.
-// Because inode locks are held during disk accesses, 
+// Because inode locks are held during disk accesses,
 // they are implemented using a flag rather than with
 // spin locks.  Callers are responsible for locking
 // inodes before passing them to routines in this file; leaving
 // this responsibility with the caller makes it possible for them
 // to create arbitrarily-sized atomic operations.
 //
-// To give maximum control over locking to the callers, 
-// the routines in this file that return inode pointers 
+// To give maximum control over locking to the callers,
+// the routines in this file that return inode pointers
 // return pointers to *unlocked* inodes.  It is the callers'
 // responsibility to lock them before using them.  A non-zero
 // ip->ref keeps these unlocked inodes in the cache.
@@ -311,7 +311,7 @@ iunlockput(struct inode *ip)
 //
 // The contents (data) associated with each inode is stored
 // in a sequence of blocks on the disk.  The first NDIRECT blocks
-// are listed in ip->addrs[].  The next NINDIRECT blocks are 
+// are listed in ip->addrs[].  The next NINDIRECT blocks are
 // listed in the block ip->addrs[NDIRECT].
 
 // Return the disk block address of the nth block in inode ip.
@@ -362,7 +362,7 @@ itrunc(struct inode *ip)
       ip->addrs[i] = 0;
     }
   }
-  
+
   if(ip->addrs[NDIRECT]){
     bp = bread(ip->dev, ip->addrs[NDIRECT]);
     a = (uint*)bp->data;
@@ -518,7 +518,7 @@ dirlink(struct inode *dp, char *name, uint inum)
   de.inum = inum;
   if(writei(dp, (char*)&de, off, sizeof(de)) != sizeof(de))
     panic("dirlink");
-  
+
   return 0;
 }
 
@@ -610,4 +610,133 @@ struct inode*
 nameiparent(char *path, char *name)
 {
   return namex(path, 1, name);
+}
+
+int
+tagFile(int fileDescriptor, char* key, char* value, int valueLength)
+{
+  if (key == NULL || strlen(key) < 1 || strlen(key) > 9) return -1;
+  if (value == NULL || strlen(value) != valueLength || strlen(value) < 0 || strlen(key) > 18) return -1;
+  if (fileDescriptor < 0 || fileDescriptor >= NOFILE) return -1;
+  struct file* f;
+  if ((f = proc->ofile[fileDescriptor]) == 0) return -1;
+  if (f->writable == false || f->type != FD_INODE || f->ip == false) return -1;
+
+  ilock(f->ip);
+
+  if (f->ip->tags == 0){
+    f->ip->tags = balloc(f->ip->dev); // will panic if fail
+  }
+
+  struct buf* buffer;
+  buffer = bread(f->ip->dev, f->ip->tags);
+  uchar* data;
+  data = (uchar*)buffer->data; //&
+
+  int existKeyPosition = searchKey((uchar*)key, (uchar*)data);
+  if (existKeyPosition >= 0){
+    memset((void*)((uint)data + (uint)existKeyPosition + 10), 0, 18);
+    memmove((void*)((uint)data + (uint)existKeyPosition + 10), (void*)value, (uint)valueLength);
+    bwrite(buffer);
+    brelse(buffer);
+    iunlock(f->ip);
+    return 1;
+  }
+  else{
+    int tagEnd = searchEnd((uchar*)str);
+    if (tagEnd < 0){
+      brelse(buffer);
+      iunlock(f->ip);
+      return -1;
+    }
+    memset((void*)((uint)data + (uint)tagEnd), 0, 28);
+    memmove((void*)((uint)data + (uint)tagEnd), (void*)key, (uint)strlen(key));
+    memmove((void*)((uint)data + (uint)tagEnd + 10), (void*)value, (uint)valueLength);
+    bwrite(buffer);
+    brelse(buffer);
+    iunlock(f->ip);
+    return 1;
+  }
+  // not possible to reach here
+  brelse(buffer);
+  iunlock(f->ip);
+  return -1;
+}
+
+int
+removeFileTag(int fileDescriptor, char* key)
+{
+  if (key == NULL || strlen(key) < 1 || strlen(key) > 9) return -1;
+  if (fileDescriptor < 0 || fileDescriptor >= NOFILE) return -1;
+  struct file* f;
+  if ((f = proc->ofile[fileDescriptor]) == 0) return -1;
+  if (f->writable == false || f->type != FD_INODE || f->ip == false) return -1;
+
+  ilock(f->ip);
+
+  if (f->ip->tags == 0){
+    iunlock(f->ip);
+    return -1;
+  }
+
+  struct buf* buffer;
+  buffer = bread(f->ip->dev, f->ip->tags);
+  uchar* data;
+  data = (uchar*)buffer->data; //&
+
+  int existKeyPosition = searchKey((uchar*)key, (uchar*)data);
+  if (existKeyPosition < 0){
+    brelse(buffer);
+    iunlock(f->ip);
+    return -1;
+  }
+  memset((void*)((uint)data + (uint)existKeyPosition), 0, 28);
+  bwrite(buffer);
+  brelse(buffer);
+  iunlock(f->ip);
+  return 1;
+}
+
+int
+getFileTag(int fileDescriptor, char* key, char* buffer, int length)
+{
+  if (key == NULL || strlen(key) < 1 || strlen(key) > 9) return -1;
+  if (fileDescriptor < 0 || fileDescriptor >= NOFILE) return -1;
+  struct file* f;
+  if ((f = proc->ofile[fileDescriptor]) == 0) return -1;
+  if (f->writable == false || f->type != FD_INODE || f->ip == false) return -1;
+
+  ilock(f->ip);
+
+  if (f->ip->tags == 0){
+    iunlock(f->ip);
+    return -1;
+  }
+
+  struct buf* bf;
+  bf = bread(f->ip->dev, f->ip->tags);
+  uchar* data;
+  data = (uchar*)bf->data; //&
+
+  int existKeyPosition = searchKey((uchar*)key, (uchar*)data);
+  if (existKeyPosition < 0){
+    brelse(bf);
+    iunlock(f->ip);
+    return -1;
+  }
+  int endOfValuePosition = 27;
+  while (endOfValuePosition >= 10 && !data[existKeyPosition + endOfValuePosition]){
+    endOfValuePosition--;
+  }
+  endOfValuePosition++; // point to the last byte of value
+  if (endOfValuePosition == 10){
+    brelse(bf);
+    iunlock(f->ip);
+    return -1;
+  }
+
+  memmove((void*)buffer, (void*)value, (uint)min(length, endOfValuePosition - 9));
+  brelse(bf);
+  iunlock(f->ip);
+  return endOfValuePosition - 9;
 }
