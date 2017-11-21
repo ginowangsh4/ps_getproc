@@ -109,11 +109,6 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-int             clone(void(*fcn)(void*), void* arg, void* stack);
-int             join(int pid);
-void            cv_wait(cond_t* conditionVariable, lock_t* lock);
-void            cv_signal(cond_t* conditionVariable);
-int             find_ustack(int pid);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -126,8 +121,6 @@ void            initlock(struct spinlock*, char*);
 void            release(struct spinlock*);
 void            pushcli(void);
 void            popcli(void);
-void            lock_t_acquire(lock_t* lock);
-void            lock_t_release(lock_t* lock);
 
 // string.c
 int             memcmp(const void*, const void*, uint);

@@ -16,36 +16,16 @@ USER_PROGS := \
 	tester\
 	usertests\
 	wc\
-	zombie\
-	badclone\
-	clone\
-	clone2\
-	clone3\
-	cond\
-	cond2\
-	cond3\
-	join\
-	join2\
-	join3\
-	join4\
-	thread\
-	thread2\
-	stack\
-	locks\
-	multi\
-	noexit\
-	race\
+	zombie
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 
 # user library files
 USER_LIBS := \
 	ulib.o\
-	uthreadlib.o\
 	usys.o\
 	printf.o\
-	umalloc.o\
-
+	umalloc.o
 
 USER_LIBS := $(addprefix user/, $(USER_LIBS))
 
@@ -122,3 +102,4 @@ user/%.d: user/%.c
 user/%.d: user/%.S
 	$(CC) $(CPPFLAGS) $(USER_CPPFLAGS) $(ASFLAGS) $(USER_ASFLAGS) \
 		-M -MG $< -MF $@ -MT $@ -MT $(<:.S=.o)
+

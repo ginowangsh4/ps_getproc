@@ -5,9 +5,8 @@
 #include "param.h"
 #include "x86.h"
 #include "mmu.h"
-#include "spinlock.h"
 #include "proc.h"
-
+#include "spinlock.h"
 
 void
 initlock(struct spinlock *lk, char *name)
@@ -15,20 +14,6 @@ initlock(struct spinlock *lk, char *name)
   lk->name = name;
   lk->locked = 0;
   lk->cpu = 0;
-}
-
-// Acquire and release for thread lock
-void
-lock_t_acquire(lock_t* lock)
-{
-  // xchg put value into address
-  while(xchg(lock, 1) != 0);
-}
-
-void
-lock_t_release(lock_t* lock)
-{
-  xchg(lock, 0);
 }
 
 // Acquire the lock.
@@ -44,7 +29,7 @@ acquire(struct spinlock *lk)
 
   // The xchg is atomic.
   // It also serializes, so that reads after acquire are not
-  // reordered before it.
+  // reordered before it. 
   while(xchg(&lk->locked, 1) != 0)
     ;
 
@@ -63,7 +48,7 @@ release(struct spinlock *lk)
   lk->pcs[0] = 0;
   lk->cpu = 0;
 
-  // The xchg serializes, so that reads before release are
+  // The xchg serializes, so that reads before release are 
   // not reordered after it.  The 1996 PentiumPro manual (Volume 3,
   // 7.2) says reads can be carried out speculatively and in
   // any order, which implies we need to serialize here.
@@ -83,7 +68,7 @@ getcallerpcs(void *v, uint pcs[])
 {
   uint *ebp;
   int i;
-
+  
   ebp = (uint*)v - 2;
   for(i = 0; i < 10; i++){
     if(ebp == 0 || ebp < (uint*)0x100000 || ebp == (uint*)0xffffffff)
@@ -111,7 +96,7 @@ void
 pushcli(void)
 {
   int eflags;
-
+  
   eflags = readeflags();
   cli();
   if(cpu->ncli++ == 0)
@@ -128,3 +113,4 @@ popcli(void)
   if(cpu->ncli == 0 && cpu->intena)
     sti();
 }
+

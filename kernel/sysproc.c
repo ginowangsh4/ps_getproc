@@ -3,7 +3,6 @@
 #include "defs.h"
 #include "param.h"
 #include "mmu.h"
-#include "spinlock.h"
 #include "proc.h"
 #include "sysfunc.h"
 
@@ -61,7 +60,7 @@ sys_sleep(void)
 {
   int n;
   uint ticks0;
-
+  
   if(argint(0, &n) < 0)
     return -1;
   acquire(&tickslock);
@@ -83,62 +82,9 @@ int
 sys_uptime(void)
 {
   uint xticks;
-
+  
   acquire(&tickslock);
   xticks = ticks;
   release(&tickslock);
   return xticks;
-}
-
-
-int
-sys_clone(void)
-{
-  void (*fcn)(void*);
-  void *arg;
-  void *stack;
-  if (argptr(0, (char**)&fcn, 4) < 0) return -1;
-  if (argptr(1, (char**)&arg, 4) < 0) return -1;
-  if (argptr(2, (char**)&stack, 2 * PGSIZE) < 0) return -1;
-  return clone(fcn, arg, stack);
-}
-
-int
-sys_join(void)
-{
-  int pid;
-  if (argint(0, &pid)) return -1;
-  return join(pid);
-}
-
-
-int
-sys_cv_wait(void)
-{
-  cond_t* conditionVariable;
-  lock_t* lock;
-
-  if (argptr(0, (char**)&conditionVariable, 4) < 0) return -1;
-  if (argptr(1, (char**)&lock, 4) < 0) return -1;
-
-  cv_wait(conditionVariable, lock);
-  return 0;
-}
-
-int
-sys_cv_signal(void)
-{
-  cond_t* conditionVariable;
-
-  if (argptr(0, (char**)&conditionVariable, 4) < 0) return -1;
-  cv_signal(conditionVariable);
-  return 0;
-}
-
-int
-sys_find_ustack(void)
-{
-  int pid;
-  if (argint(0, &pid) < 0) return -1;
-  return find_ustack(pid);
 }

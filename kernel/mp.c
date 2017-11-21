@@ -8,7 +8,6 @@
 #include "mp.h"
 #include "x86.h"
 #include "mmu.h"
-#include "spinlock.h"
 #include "proc.h"
 
 struct cpu cpus[NCPU];
@@ -27,7 +26,7 @@ static uchar
 sum(uchar *addr, int len)
 {
   int i, sum;
-
+  
   sum = 0;
   for(i=0; i<len; i++)
     sum += addr[i];
