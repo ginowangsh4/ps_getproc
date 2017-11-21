@@ -620,7 +620,7 @@ tagFile(int fileDescriptor, char* key, char* value, int valueLength)
   if (fileDescriptor < 0 || fileDescriptor >= NOFILE) return -1;
   struct file* f;
   if ((f = proc->ofile[fileDescriptor]) == 0) return -1;
-  if (f->writable == false || f->type != FD_INODE || f->ip == false) return -1;
+  if (!f->writable || f->type != FD_INODE || !f->ip) return -1;
 
   ilock(f->ip);
 
@@ -633,7 +633,7 @@ tagFile(int fileDescriptor, char* key, char* value, int valueLength)
   uchar* data;
   data = (uchar*)buffer->data; //&
 
-  int existKeyPosition = searchKey((uchar*)key, (uchar*)data);
+  int existKeyPosition = findKeyInBlock((uchar*)key, (uchar*)data);
   if (existKeyPosition >= 0){
     memset((void*)((uint)data + (uint)existKeyPosition + 10), 0, 18);
     memmove((void*)((uint)data + (uint)existKeyPosition + 10), (void*)value, (uint)valueLength);
@@ -643,7 +643,7 @@ tagFile(int fileDescriptor, char* key, char* value, int valueLength)
     return 1;
   }
   else{
-    int tagEnd = searchEnd((uchar*)str);
+    int tagEnd = tagFullInBlock((uchar*)data);
     if (tagEnd < 0){
       brelse(buffer);
       iunlock(f->ip);
@@ -670,7 +670,7 @@ removeFileTag(int fileDescriptor, char* key)
   if (fileDescriptor < 0 || fileDescriptor >= NOFILE) return -1;
   struct file* f;
   if ((f = proc->ofile[fileDescriptor]) == 0) return -1;
-  if (f->writable == false || f->type != FD_INODE || f->ip == false) return -1;
+  if (!f->writable || f->type != FD_INODE || !f->ip) return -1;
 
   ilock(f->ip);
 
@@ -684,7 +684,7 @@ removeFileTag(int fileDescriptor, char* key)
   uchar* data;
   data = (uchar*)buffer->data; //&
 
-  int existKeyPosition = searchKey((uchar*)key, (uchar*)data);
+  int existKeyPosition = findKeyInBlock((uchar*)key, (uchar*)data);
   if (existKeyPosition < 0){
     brelse(buffer);
     iunlock(f->ip);
@@ -704,7 +704,7 @@ getFileTag(int fileDescriptor, char* key, char* buffer, int length)
   if (fileDescriptor < 0 || fileDescriptor >= NOFILE) return -1;
   struct file* f;
   if ((f = proc->ofile[fileDescriptor]) == 0) return -1;
-  if (f->writable == false || f->type != FD_INODE || f->ip == false) return -1;
+  if (!f->writable || f->type != FD_INODE || !f->ip) return -1;
 
   ilock(f->ip);
 
@@ -718,7 +718,7 @@ getFileTag(int fileDescriptor, char* key, char* buffer, int length)
   uchar* data;
   data = (uchar*)bf->data; //&
 
-  int existKeyPosition = searchKey((uchar*)key, (uchar*)data);
+  int existKeyPosition = findKeyInBlock((uchar*)key, (uchar*)data);
   if (existKeyPosition < 0){
     brelse(bf);
     iunlock(f->ip);
@@ -735,8 +735,14 @@ getFileTag(int fileDescriptor, char* key, char* buffer, int length)
     return -1;
   }
 
-  memmove((void*)buffer, (void*)value, (uint)min(length, endOfValuePosition - 9));
+  memmove((void*)buffer, (void*)((uint)data + (uint)existKeyPosition + 10), (uint)min(length, endOfValuePosition - 9));
   brelse(bf);
   iunlock(f->ip);
-  return endOfValuePosition - 9;
+  return endOfValuePosition - 10;
+}
+
+int
+getAllTags(int fileDescriptor, struct Key keys[], int maxTags)
+{
+  return -1;
 }

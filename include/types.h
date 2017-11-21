@@ -7,6 +7,9 @@ typedef unsigned int   uint;
 typedef unsigned short ushort;
 typedef unsigned char  uchar;
 typedef uint pde_t;
+struct Key {
+  char key[10];
+};
 #ifndef NULL
 #define NULL (0)
 #endif

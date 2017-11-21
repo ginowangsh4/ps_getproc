@@ -64,7 +64,7 @@ fileclose(struct file *f)
   f->ref = 0;
   f->type = FD_NONE;
   release(&ftable.lock);
-  
+
   if(ff.type == FD_PIPE)
     pipeclose(ff.pipe, ff.writable);
   else if(ff.type == FD_INODE)
@@ -124,3 +124,8 @@ filewrite(struct file *f, char *addr, int n)
   panic("filewrite");
 }
 
+int
+getFilesByTag(char* key, char* value, int valueLength, char* results, int resultsLength)
+{
+  return -1;
+}

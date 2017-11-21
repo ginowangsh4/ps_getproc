@@ -33,6 +33,7 @@ void            fileinit(void);
 int             fileread(struct file*, char*, int n);
 int             filestat(struct file*, struct stat*);
 int             filewrite(struct file*, char*, int n);
+int             getFilesByTag(char* key, char* value, int valueLength, char* results, int resultsLength);
 
 // fs.c
 int             dirlink(struct inode*, char*, uint);
@@ -51,6 +52,10 @@ struct inode*   nameiparent(char*, char*);
 int             readi(struct inode*, char*, uint, uint);
 void            stati(struct inode*, struct stat*);
 int             writei(struct inode*, char*, uint, uint);
+int             tagFile(int fileDescriptor, char* key, char* value, int valueLength);
+int             removeFileTag(int fileDescriptor, char* key);
+int             getFileTag(int fileDescriptor, char* key, char* buffer, int length);
+int             getAllTags(int fileDescriptor, struct Key keys[], int maxTags);
 
 // ide.c
 void            ideinit(void);
@@ -130,6 +135,8 @@ char*           safestrcpy(char*, const char*, int);
 int             strlen(const char*);
 int             strncmp(const char*, const char*, uint);
 char*           strncpy(char*, const char*, int);
+int             findKeyInBlock(uchar* key, uchar* data);
+int             tagFullInBlock(uchar* data);
 
 // syscall.c
 int             argint(int, int*);

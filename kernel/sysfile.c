@@ -391,37 +391,68 @@ sys_pipe(void)
   return 0;
 }
 
-int sys_tagFile(void) {
+int
+sys_tagFile(void)
+{
   int fileDescriptor;
   char* key;
   char* value;
   int valueLength;
-
-  return tagFile(int fileDescriptor, char* key, char* value, int valueLength);
+  if (argint(0, &fileDescriptor) < 0) return -1;
+  if (argstr(1, &key) < 0) return -1;
+  if (argstr(2, &value) < 0) return -1;
+  if (argint(3, &valueLength) < 0) return -1;
+  return tagFile(fileDescriptor, key, value, valueLength);
 }
 
-int sys_removeFileTag(void) {
+int
+sys_removeFileTag(void)
+{
   int fileDescriptor;
   char* key;
-
-  return removeFileTag(int fileDescriptor, char* key);
+  if (argint(0, &fileDescriptor) < 0) return -1;
+  if (argstr(1, &key) < 0) return -1;
+  return removeFileTag(fileDescriptor, key);
 }
 
-int sys_getFileTag(void) {
+int
+sys_getFileTag(void)
+{
   int fileDescriptor;
   char* key;
   char* buffer;
   int length;
-  return getFileTag(int fileDescriptor, char* key, char* buffer, int length);
+  if (argint(0, &fileDescriptor) < 0) return -1;
+  if (argstr(1, &key) < 0) return -1;
+  if (argstr(2, &buffer) < 0) return -1;
+  if (argint(3, &length) < 0) return -1;
+  return getFileTag(fileDescriptor, key, buffer, length);
 }
 
-int sys_getAllTags(void) {
+int
+sys_getAllTags(void)
+{
   int fileDescriptor;
-  struct Key keys[];
+  struct Key *keys;
   int maxTags;
-  return getAllTags(int fileDescriptor, struct Key keys[], int maxTags);
+  if (argint(0, &fileDescriptor) < 0) return -1;
+  if (argptr(1, (char**)&keys, sizeof(struct Key) * maxTags) < 0) return -1;
+  if (argint(2, &maxTags) < 0) return -1;
+  return getAllTags(fileDescriptor, keys, maxTags);
 }
 
-int sys_getFilesByTag(void) {
-  return getFilesByTag(char* key, char* value, int valueLength, char* results, int resultsLength);
+int
+sys_getFilesByTag(void)
+{
+  char* key;
+  char* value;
+  int valueLength;
+  char* results;
+  int resultsLength;
+  if (argstr(0, &key) < 0) return -1;
+  if (argstr(1, &value) < 0) return -1;
+  if (argint(2, &valueLength) < 0) return -1;
+  if (argstr(3, &results) < 0) return -1;
+  if (argint(4, &resultsLength)) return -1;
+  return getFilesByTag(key, value, valueLength, results, resultsLength);
 }
