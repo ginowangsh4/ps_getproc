@@ -634,7 +634,7 @@ tagFile(int fileDescriptor, char* key, char* value, int valueLength)
   data = (uchar*)buffer->data; //&
 
   int existKeyPosition = findKeyInBlock((uchar*)key, (uchar*)data);
-  cprintf("existKeyPosition%d\n", existKeyPosition);
+  // cprintf("existKeyPosition%d\n", existKeyPosition);
   if (existKeyPosition >= 0){
     memset((void*)((uint)data + (uint)existKeyPosition + 10), 0, 18);
     memmove((void*)((uint)data + (uint)existKeyPosition + 10), (void*)value, (uint)valueLength);
@@ -645,7 +645,7 @@ tagFile(int fileDescriptor, char* key, char* value, int valueLength)
   }
   else{
     int tagEnd = tagFullInBlock((uchar*)data);
-    cprintf("tagEnd%d\n", tagEnd);
+    // cprintf("tagEnd%d\n", tagEnd);
     if (tagEnd < 0){
       brelse(buffer);
       iunlock(f->ip);
@@ -702,6 +702,7 @@ removeFileTag(int fileDescriptor, char* key)
 int
 getFileTag(int fileDescriptor, char* key, char* buffer, int length)
 {
+  // cprintf("starting get file tags");
   if (key == NULL || strlen(key) < 1 || strlen(key) > 9) return -1;
   if (fileDescriptor < 0 || fileDescriptor >= NOFILE) return -1;
   struct file* f;
@@ -746,11 +747,24 @@ getFileTag(int fileDescriptor, char* key, char* buffer, int length)
 int
 getAllTags(int fileDescriptor, struct Key keys[], int maxTags)
 {
-  if (maxTags < 0 || !keys) return -1;
-  if (fileDescriptor < 0 || fileDescriptor >= NOFILE) return -1;
+  cprintf("starting get all tags");
+  if (maxTags < 0 || !keys) {
+    cprintf("1");
+    return -1;
+  }
+  if (fileDescriptor < 0 || fileDescriptor >= NOFILE){
+    cprintf("2");
+    return -1;
+  }
   struct file* f;
-  if ((f = proc->ofile[fileDescriptor]) == 0) return -1;
-  if (!f->writable || f->type != FD_INODE || !f->ip) return -1;
+  if ((f = proc->ofile[fileDescriptor]) == 0){
+    cprintf("3");
+    return -1;
+  }
+  if (!f->writable || f->type != FD_INODE || !f->ip){
+    cprintf("4");
+    return -1;
+  }
 
   ilock(f->ip);
 
@@ -776,6 +790,7 @@ getAllTags(int fileDescriptor, struct Key keys[], int maxTags)
   }
   brelse(bf);
   iunlock(f->ip);
+  cprintf("number of tags:%d\n",count);
   return count;
 }
 
