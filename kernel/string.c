@@ -105,14 +105,12 @@ findKeyInBlock(uchar* key, uchar* data)
 {
   int i;
   for (i = 0; i < BSIZE; i += 32){ // 32 is the size of a tag
-    int j;
-    for (j = 0; j < 10 && i + j < BSIZE; j++){
-      if (key[j] && data[i + j] && key[j] == data[i + j]){
-        continue;
-      }
-      if (j == strlen((char*)key) && !key[j] && !data[i + j]){
-        return i;
-      }
+    int j = 0;
+    while(j < 10 && i + j < BSIZE && key[j] && data[i + j] && key[j] == data[i + j]){
+      j++;
+    }
+    if (j == strlen((char*)key) && !key[j] && !data[i + j]){
+      return i;
     }
   }
   return -1;

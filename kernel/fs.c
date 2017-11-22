@@ -634,6 +634,7 @@ tagFile(int fileDescriptor, char* key, char* value, int valueLength)
   data = (uchar*)buffer->data; //&
 
   int existKeyPosition = findKeyInBlock((uchar*)key, (uchar*)data);
+  cprintf("existKeyPosition%d\n", existKeyPosition);
   if (existKeyPosition >= 0){
     memset((void*)((uint)data + (uint)existKeyPosition + 10), 0, 18);
     memmove((void*)((uint)data + (uint)existKeyPosition + 10), (void*)value, (uint)valueLength);
@@ -644,6 +645,7 @@ tagFile(int fileDescriptor, char* key, char* value, int valueLength)
   }
   else{
     int tagEnd = tagFullInBlock((uchar*)data);
+    cprintf("tagEnd%d\n", tagEnd);
     if (tagEnd < 0){
       brelse(buffer);
       iunlock(f->ip);
@@ -780,8 +782,6 @@ getAllTags(int fileDescriptor, struct Key keys[], int maxTags)
 int
 recordName(struct file* f, char* key, char* value, int valueLength, char* results, int resultsLength)
 {
-  int j = 0;
-  int k = 0;
   struct buf *buffer;
   uchar data[BSIZE];
   buffer = bread(f->ip->dev, f->ip->tags);
@@ -790,7 +790,6 @@ recordName(struct file* f, char* key, char* value, int valueLength, char* result
 
   int existKeyPosition = 0;
   int endOfValuePosition;
-  char *valuePosition;
   if ((existKeyPosition = findKeyInBlock((uchar*)key, (uchar*)data)) >= 0) {
     endOfValuePosition = 27;
     while (endOfValuePosition >= 10 && !data[existKeyPosition + endOfValuePosition]){
@@ -812,7 +811,7 @@ recordName(struct file* f, char* key, char* value, int valueLength, char* result
         int end;
         if (entry->inum) {
           end = resultsLength - 1;
-          while (k >= 0 && !results[end]) end--;
+          while (end >= 0 && !results[end]) end--;
           end++;
           if (end) end++;
           filename = entry->name;
