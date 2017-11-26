@@ -749,47 +749,40 @@ getAllTags(int fileDescriptor, struct Key keys[], int maxTags)
 {
   cprintf("starting get all tags");
   if (maxTags < 0 || !keys) {
-    cprintf("1");
     return -1;
   }
   if (fileDescriptor < 0 || fileDescriptor >= NOFILE){
-    cprintf("2");
     return -1;
   }
   struct file* f;
   if ((f = proc->ofile[fileDescriptor]) == 0){
-    cprintf("3");
     return -1;
   }
   if (!f->writable || f->type != FD_INODE || !f->ip){
-    cprintf("4");
     return -1;
   }
 
   ilock(f->ip);
 
-  if (f->ip->tags == 0){
-    iunlock(f->ip);
-    return 1;
+  if (!f->ip->tags){
+    f->ip->tags = balloc(f->ip->dev);
   }
 
   struct buf* bf;
   bf = bread(f->ip->dev, f->ip->tags);
-  uchar* data;
-  data = (uchar*)bf->data; //&
-
+  uchar data[BSIZE];
+  memmove((void*)data, (void*)bf->data, (uint)BSIZE);
+  brelse(bf);
+  iunlock(f->ip);
   int i;
   int count = 0;
   for (i = 0; i < BSIZE; i += 32){ // 32 is the size of a tag
     if (data[i]){
-      if (count < maxTags){
-        memmove((void*)keys[count].key, (void*)((uint)data + i), (uint)strlen((char*)((uint)data + (uint)i)));
-      }
+      memmove((void*)keys[count].key, (void*)((uint)data + i), (uint)strlen((char*)((uint)data + (uint)i)));
       count++;
     }
   }
-  brelse(bf);
-  iunlock(f->ip);
+
   cprintf("number of tags:%d\n",count);
   return count;
 }
