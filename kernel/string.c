@@ -110,7 +110,7 @@ findKeyInBlock(uchar* key, uchar* data)
       j++;
     }
     if (j == strlen((char*)key) && !key[j] && !data[i + j]){
-      return i;
+      return i + j - strlen((char*)key);
     }
   }
   return -1;
